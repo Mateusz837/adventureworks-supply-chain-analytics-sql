@@ -343,6 +343,39 @@ INNER JOIN Lead_Time_Weeks lt
 INNER JOIN Production.Product p
     ON d.ProductID = p.ProductID;
 
+-- Task 1.11 — EOQ (Economic Order Quantity)
+-- Business purpose: Determine the cost-optimal order quantity that minimizes total ordering and holding costs.
+-- How this helps: Supports purchasing policy by balancing frequent ordering costs vs inventory carrying costs (working capital + storage).
+-- Assumption: Ordering cost is fixed at 50 (currency units) because AdventureWorks does not provide order processing cost per PO.
+-- Assumption: Holding cost is estimated as 25% of StandardCost per year (carrying rate proxy), since actual storage/finance costs are not available.
+
+WITH Range_Date AS (
+    SELECT DATEADD(MONTH, -12, MAX(OrderDate)) AS Start_Date, MAX(OrderDate) AS End_Date
+    FROM Sales.SalesOrderHeader
+),
+Sales_Last_Year AS (
+    SELECT sd.ProductID, SUM(sd.OrderQty) AS Annual_Demand
+    FROM Sales.SalesOrderDetail sd
+    INNER JOIN Sales.SalesOrderHeader sh
+        ON sd.SalesOrderID = sh.SalesOrderID
+    WHERE sh.OrderDate BETWEEN (SELECT Start_Date FROM Range_Date) AND (SELECT End_Date FROM Range_Date)
+    GROUP BY sd.ProductID
+),
+Cost_Params AS (
+    SELECT ProductID, Name, 50.0 AS Ordering_Cost, StandardCost,
+           CAST(StandardCost * 0.25 AS DECIMAL(18,4)) AS Annual_Holding_Cost
+    FROM Production.Product
+    WHERE StandardCost > 0
+)
+SELECT
+    d.ProductID, c.Name, d.Annual_Demand, c.Ordering_Cost, c.Annual_Holding_Cost,
+    CASE WHEN c.Annual_Holding_Cost = 0 THEN NULL
+         ELSE CEILING(SQRT((2.0 * d.Annual_Demand * c.Ordering_Cost) / c.Annual_Holding_Cost))
+    END AS EOQ
+FROM Sales_Last_Year d
+INNER JOIN Cost_Params c
+    ON d.ProductID = c.ProductID;
+
 
 
 
