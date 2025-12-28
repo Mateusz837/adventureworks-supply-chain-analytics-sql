@@ -58,15 +58,15 @@ The project applies practical analytical SQL techniques commonly used in operati
 
 ## Repository Structure
 
+```
 adventureworks-supply-chain-analytics-sql/
 ├── README.md
 ├── AdventureWorks_SQL_Results.pdf
 └── sql/
-├── 01_inventory_supply_chain.sql
-└── 02_demand_planning_sales.sql
+    ├── 01_inventory_supply_chain.sql
+    └── 02_demand_planning_sales.sql
+```
 
-
----
 
 ## How to Use
 - SQL scripts are organized into **two analytical modules**:
