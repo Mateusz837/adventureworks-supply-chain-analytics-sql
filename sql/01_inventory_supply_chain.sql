@@ -56,33 +56,39 @@ ORDER BY Inventory_Value DESC;
 -- How this helps: Highlights slow-moving vs fast-rotating SKUs to optimize replenishment, reduce overstock, and improve working capital.
 -- Assumption: Uses last 12 months sales vs current inventory because AdventureWorks does not provide historical inventory snapshots.
 
-WITH Date_Range AS (
+WITH Date_Range_12M AS (
     SELECT DATEADD(YEAR, -1, MAX(OrderDate)) AS StartDate, MAX(OrderDate) AS EndDate
     FROM Sales.SalesOrderHeader
 ),
-SalesTab AS (
+Sales_Last_12M AS (
     SELECT sd.ProductID, p.Name, p.ProductNumber, SUM(sd.OrderQty) AS Total_Qt
     FROM Sales.SalesOrderDetail sd
     INNER JOIN Sales.SalesOrderHeader sh
         ON sd.SalesOrderID = sh.SalesOrderID
     INNER JOIN Production.Product p
         ON sd.ProductID = p.ProductID
-    WHERE sh.OrderDate BETWEEN (SELECT StartDate FROM Date_Range) AND (SELECT EndDate FROM Date_Range)
+    WHERE sh.OrderDate BETWEEN 
+          (SELECT StartDate FROM Date_Range_12M)
+          AND
+          (SELECT EndDate FROM Date_Range_12M)
     GROUP BY sd.ProductID, p.Name, p.ProductNumber
 ),
-Inventory AS (
+OnHand_Inventory AS (
     SELECT ProductID, SUM(Quantity) AS Inventory_QT
     FROM Production.ProductInventory
     GROUP BY ProductID
 ),
-Turnover_Tab AS (
-    SELECT st.ProductID, st.Name, st.ProductNumber, st.Total_Qt AS Sales_Qty, i.Inventory_QT,
-           CASE WHEN i.Inventory_QT = 0 THEN NULL
-                ELSE CAST(st.Total_Qt / i.Inventory_QT AS DECIMAL(10,2))
-           END AS Turnover
-    FROM SalesTab st
-    INNER JOIN Inventory i
-        ON st.ProductID = i.ProductID
+Inventory_Turnover AS (
+    SELECT
+        s.ProductID, s.Name, s.ProductNumber,
+        s.Total_Qt AS Sales_Qty,
+        i.Inventory_QT,
+        CASE WHEN i.Inventory_QT = 0 THEN NULL
+             ELSE CAST(s.Total_Qt / i.Inventory_QT AS DECIMAL(10,2))
+        END AS Turnover
+    FROM Sales_Last_12M s
+    INNER JOIN OnHand_Inventory i
+        ON s.ProductID = i.ProductID
 )
 SELECT
     ProductID, Name, ProductNumber, Sales_Qty, Inventory_QT, Turnover,
@@ -90,7 +96,7 @@ SELECT
          WHEN Turnover <= 4 THEN 'Mid_Rotation'
          WHEN Turnover > 4 THEN 'Quick_Rotation'
     END AS Rotation
-FROM Turnover_Tab
+FROM Inventory_Turnover
 ORDER BY Turnover DESC;
 
 -- Task 1.5 — Days of Supply (DoS)
@@ -98,47 +104,52 @@ ORDER BY Turnover DESC;
 -- How this helps: Helps prevent stockouts and overstock by prioritizing replenishment decisions based on consumption speed.
 -- Assumption: Average daily demand is calculated from the last 30 days of sales because a longer, cleaner demand history is not provided as a ready KPI in AdventureWorks.
 
-WITH RangeDate AS (
+WITH Date_Range_30D AS (
     SELECT DATEADD(DAY, -30, MAX(OrderDate)) AS StartDate, MAX(OrderDate) AS EndDate
     FROM Sales.SalesOrderHeader
 ),
-TotalDemand AS (
+Demand_30D AS (
     SELECT sd.ProductID, p.Name, SUM(sd.OrderQty) AS Total_Qt
     FROM Sales.SalesOrderDetail sd
     INNER JOIN Sales.SalesOrderHeader sh
         ON sd.SalesOrderID = sh.SalesOrderID
     INNER JOIN Production.Product p
         ON sd.ProductID = p.ProductID
-    WHERE sh.OrderDate BETWEEN (SELECT StartDate FROM RangeDate) AND (SELECT EndDate FROM RangeDate)
+    WHERE sh.OrderDate BETWEEN 
+          (SELECT StartDate FROM Date_Range_30D)
+          AND
+          (SELECT EndDate FROM Date_Range_30D)
     GROUP BY sd.ProductID, p.Name
 ),
-AVG_Demand AS (
-    SELECT ProductID, Name, Total_Qt / 30.0 AS AVG_Daily_Demand
-    FROM TotalDemand
+Avg_Daily_Demand AS (
+    SELECT ProductID, Name, Total_Qt / 30.0 AS Avg_Daily_Demand
+    FROM Demand_30D
 ),
-Inventory AS (
+OnHand_Inventory AS (
     SELECT ProductID, SUM(Quantity) AS Inventory_Qt
     FROM Production.ProductInventory
     GROUP BY ProductID
 ),
-DaysOfSupply AS (
-    SELECT d.ProductID, d.Name, i.Inventory_Qt, CAST(d.AVG_Daily_Demand AS DECIMAL(10,2)) AS AVG_Daily_Demand,
-           CASE WHEN d.AVG_Daily_Demand = 0 THEN NULL
-                ELSE CAST(i.Inventory_Qt / d.AVG_Daily_Demand AS DECIMAL(10,2))
-           END AS Days_of_Supply
-    FROM AVG_Demand d
-    INNER JOIN Inventory i
+Days_Of_Supply AS (
+    SELECT
+        d.ProductID, d.Name, i.Inventory_Qt,
+        CAST(d.Avg_Daily_Demand AS DECIMAL(10,2)) AS Avg_Daily_Demand,
+        CASE WHEN d.Avg_Daily_Demand = 0 THEN NULL
+             ELSE CAST(i.Inventory_Qt / d.Avg_Daily_Demand AS DECIMAL(10,2))
+        END AS Days_Of_Supply
+    FROM Avg_Daily_Demand d
+    INNER JOIN OnHand_Inventory i
         ON d.ProductID = i.ProductID
 )
 SELECT
-    ProductID, Name, Inventory_Qt, AVG_Daily_Demand, Days_of_Supply,
-    CASE WHEN Days_of_Supply <= 0 THEN 'Out of The Stock risk'
-         WHEN Days_of_Supply <= 7 THEN 'High Stockout risk'
-         WHEN Days_of_Supply <= 30 THEN 'Stock within limits'
-         WHEN Days_of_Supply <= 90 THEN 'Overstock risk'
-         WHEN Days_of_Supply > 90 THEN 'DeadStock'
+    ProductID, Name, Inventory_Qt, Avg_Daily_Demand, Days_Of_Supply,
+    CASE WHEN Days_Of_Supply <= 0 THEN 'Out of Stock Risk'
+         WHEN Days_Of_Supply <= 7 THEN 'High Stockout Risk'
+         WHEN Days_Of_Supply <= 30 THEN 'Stock Within Limits'
+         WHEN Days_Of_Supply <= 90 THEN 'Overstock Risk'
+         WHEN Days_Of_Supply > 90 THEN 'Dead Stock'
     END AS DoS_Category
-FROM DaysOfSupply;
+FROM Days_Of_Supply; 
 
 
 -- Task 1.6 — Inventory Aging
