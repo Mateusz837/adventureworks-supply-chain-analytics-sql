@@ -192,6 +192,55 @@ SELECT
 FROM Cumulative_Share
 ORDER BY Cum_Share_Pct;
 
+-- Task 1.8 — Safety Stock
+-- Business purpose: Calculate safety stock based on demand variability and supplier lead time.
+-- How this helps: Protects service level against demand and delivery uncertainty, reducing the risk of stockouts.
+-- Assumption: Uses last 30 days of sales to estimate demand variability and average lead time from purchase orders,
+--             because AdventureWorks does not provide explicit safety stock or service-level targets.
+-- Assumption: Z-score fixed at 1.65 (~95% service level).
+
+WITH Range_Date AS (
+    SELECT DATEADD(DAY, -30, MAX(OrderDate)) AS Start_Date, MAX(OrderDate) AS End_Date
+    FROM Sales.SalesOrderHeader
+),
+Daily_Sales AS (
+    SELECT CAST(sh.OrderDate AS DATE) AS OrderDate, sd.ProductID, SUM(sd.OrderQty) AS Daily_Order_Qty
+    FROM Sales.SalesOrderDetail sd
+    INNER JOIN Sales.SalesOrderHeader sh
+        ON sd.SalesOrderID = sh.SalesOrderID
+    WHERE sh.OrderDate BETWEEN (SELECT Start_Date FROM Range_Date) AND (SELECT End_Date FROM Range_Date)
+    GROUP BY CAST(sh.OrderDate AS DATE), sd.ProductID
+),
+Demand_Stats AS (
+    SELECT
+        ProductID,
+        AVG(CAST(Daily_Order_Qty AS FLOAT)) AS Avg_Daily_Demand,
+        STDEVP(CAST(Daily_Order_Qty AS FLOAT)) AS Demand_Std_Dev
+    FROM Daily_Sales
+    GROUP BY ProductID
+),
+Lead_Time AS (
+    SELECT
+        pd.ProductID,
+        AVG(CAST(DATEDIFF(DAY, ph.OrderDate, ph.ShipDate) AS FLOAT)) AS Avg_Lead_Time
+    FROM Purchasing.PurchaseOrderDetail pd
+    INNER JOIN Purchasing.PurchaseOrderHeader ph
+        ON pd.PurchaseOrderID = ph.PurchaseOrderID
+    WHERE ph.ShipDate IS NOT NULL
+    GROUP BY pd.ProductID
+)
+SELECT
+    ds.ProductID, p.Name, ds.Avg_Daily_Demand, ROUND(ds.Demand_Std_Dev, 2) AS Demand_Std_Dev,
+    lt.Avg_Lead_Time,
+    ROUND(1.65 * ds.Demand_Std_Dev * SQRT(lt.Avg_Lead_Time), 2) AS Safety_Stock
+FROM Demand_Stats ds
+INNER JOIN Lead_Time lt
+    ON ds.ProductID = lt.ProductID
+INNER JOIN Production.Product p
+    ON ds.ProductID = p.ProductID
+WHERE ds.Demand_Std_Dev IS NOT NULL
+  AND lt.Avg_Lead_Time IS NOT NULL;
+
 
 
 
