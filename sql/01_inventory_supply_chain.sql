@@ -2,7 +2,7 @@ USE AdventureWorks2022;
 
 /*
 ============================================================
-MODULE 1 — INVENTORY & SUPPLY CHAIN ANALYTICS (T-SQL)
+MODULE 1 — INVENTORY ANALYTICS (T-SQL)
 Database: AdventureWorks2022
 Scope: Tasks 1.1 – 1.12
 ============================================================
