@@ -22,7 +22,7 @@ ORDER BY p.ProductID, l.Name;
 
 -- Task 1.2 — Low Stock Alerts
 -- Business purpose: Identify SKUs at risk of stockout by flagging inventory levels below a defined threshold.
--- How this helps: Supports replenishment planning (purchase/production/transfers) to prevent lost sales and maintain service level.
+-- Business Value: Supports replenishment planning (purchase/production/transfers) to prevent lost sales and maintain service level.
 
 
 SELECT
@@ -38,7 +38,7 @@ ORDER BY i.Quantity ASC, p.Name ASC;
 
 -- Task 1.3 — Inventory Valuation
 -- Business purpose: Calculate the monetary value of current inventory at each warehouse/location.
--- How this helps: Shows where capital is tied up in stock, helping prioritize reduction of overstock and focus on the highest-value SKUs/locations.
+-- Business Value: Shows where capital is tied up in stock, helping prioritize reduction of overstock and focus on the highest-value SKUs/locations.
 
 SELECT
     p.ProductID, p.Name as Product_name, p.ProductNumber, l.Name as Location_name, i.Quantity,
@@ -53,7 +53,7 @@ ORDER BY Inventory_Value DESC;
 
 -- Task 1.4 — Inventory Turnover
 -- Business purpose: Measure how many times inventory is sold and replenished over a year.
--- How this helps: Highlights slow-moving vs fast-rotating SKUs to optimize replenishment, reduce overstock, and improve working capital.
+-- Business Value: Highlights slow-moving vs fast-rotating SKUs to optimize replenishment, reduce overstock, and improve working capital.
 -- Assumption: Uses last 12 months sales vs current inventory because AdventureWorks does not provide historical inventory snapshots.
 
 WITH Date_Range_12M AS (
@@ -101,7 +101,7 @@ ORDER BY Turnover DESC;
 
 -- Task 1.5 — Days of Supply (DoS)
 -- Business purpose: Estimate how many days current inventory will last at the current sales rate.
--- How this helps: Helps prevent stockouts and overstock by prioritizing replenishment decisions based on consumption speed.
+-- Business Value: Helps prevent stockouts and overstock by prioritizing replenishment decisions based on consumption speed.
 -- Assumption: Average daily demand is calculated from the last 30 days of sales because a longer, cleaner demand history is not provided as a ready KPI in AdventureWorks.
 
 WITH Date_Range_30D AS (
@@ -154,7 +154,7 @@ FROM Days_Of_Supply;
 
 -- Task 1.6 — Inventory Aging
 -- Business purpose: Estimate how long inventory has been sitting in stock using the last modified date of the inventory record.
--- How this helps: Highlights potentially obsolete / slow-moving items, supporting write-off decisions, promotions, and inventory reduction actions.
+-- Business Value: Highlights potentially obsolete / slow-moving items, supporting write-off decisions, promotions, and inventory reduction actions.
 -- Assumption: Uses Production.ProductInventory.ModifiedDate as a proxy for stock age because AdventureWorks does not provide receipt-date / lot-level inventory history.
 
 SELECT
@@ -167,7 +167,7 @@ INNER JOIN Production.Product p
 
 -- Task 1.7 — ABC Classification (by inventory value)
 -- Business purpose: Prioritize SKUs based on their contribution to total inventory value (A/B/C segmentation).
--- How this helps: Focuses control on high-value SKUs (A-class) to improve cycle counting, replenishment priority, and working capital efficiency.
+-- Business Value: Focuses control on high-value SKUs (A-class) to improve cycle counting, replenishment priority, and working capital efficiency.
 -- Assumption: Inventory value is based on StandardCost * on-hand quantity (current snapshot), since AdventureWorks does not provide receipt-level valuation history.
 
 WITH Product_Inventory_Value AS (
@@ -204,7 +204,7 @@ ORDER BY Cum_Share_Pct;
 
 -- Task 1.8 — Safety Stock
 -- Business purpose: Calculate safety stock based on demand variability and supplier lead time.
--- How this helps: Protects service level against demand and delivery uncertainty, reducing the risk of stockouts.
+-- Business Value: Protects service level against demand and delivery uncertainty, reducing the risk of stockouts.
 -- Assumption: Uses last 30 days of sales to estimate demand variability and average lead time from purchase orders,
 --             because AdventureWorks does not provide explicit safety stock or service-level targets.
 -- Assumption: Z-score fixed at 1.65 (~95% service level).
@@ -253,7 +253,7 @@ WHERE ds.Demand_Std_Dev IS NOT NULL
 
 -- Task 1.9 — Reorder Point (ROP)
 -- Business purpose: Determine the inventory level at which a replenishment order should be triggered to avoid shortages during lead time.
--- How this helps: Helps planners reorder at the right moment, balancing stockout risk vs excess inventory and improving service level.
+-- Business Value: Helps planners reorder at the right moment, balancing stockout risk vs excess inventory and improving service level.
 -- Assumption: Average daily demand is estimated from last 30 days of sales and lead time from purchase orders in AdventureWorks.
 -- Assumption: Safety stock uses Z = 1.65 (~95% service level).
 
@@ -307,7 +307,7 @@ WHERE ss.Avg_Lead_Time IS NOT NULL
 
 -- Task 1.10 — MOQ (Minimum Order Quantity)
 -- Business purpose: Estimate a practical minimum order quantity needed to cover demand during lead time.
--- How this helps: Supports purchasing decisions by suggesting an order size that avoids frequent small orders and reduces stockout risk during replenishment.
+-- Business Value: Supports purchasing decisions by suggesting an order size that avoids frequent small orders and reduces stockout risk during replenishment.
 -- Assumption: True supplier MOQ is not available in AdventureWorks; MOQ is approximated as average weekly demand * average lead time (in weeks).
 -- Assumption: Weekly demand is computed from the last 30 days of sales (ISO week aggregation).
 
@@ -355,7 +355,7 @@ INNER JOIN Production.Product p
 
 -- Task 1.11 — EOQ (Economic Order Quantity)
 -- Business purpose: Determine the cost-optimal order quantity that minimizes total ordering and holding costs.
--- How this helps: Supports purchasing policy by balancing frequent ordering costs vs inventory carrying costs (working capital + storage).
+-- Business Value: Supports purchasing policy by balancing frequent ordering costs vs inventory carrying costs (working capital + storage).
 -- Assumption: Ordering cost is fixed at 50 (currency units) because AdventureWorks does not provide order processing cost per PO.
 -- Assumption: Holding cost is estimated as 25% of StandardCost per year (carrying rate proxy), since actual storage/finance costs are not available.
 
@@ -388,7 +388,7 @@ INNER JOIN Cost_Params c
 
 -- Task 1.12 — EPQ (Economic Production Quantity)
 -- Business purpose: Estimate the cost-optimal production lot size that minimizes setup and holding costs under finite production capacity.
--- How this helps: Supports production planning by defining an efficient batch size, reducing excessive setups and avoiding unnecessary inventory buildup.
+-- Business Value: Supports production planning by defining an efficient batch size, reducing excessive setups and avoiding unnecessary inventory buildup.
 -- Assumption: Setup cost is fixed at 120 (currency units) because AdventureWorks does not provide per-product setup cost data.
 -- Assumption: Annual production capacity is set to 100000 units per product as a proxy, since actual capacity constraints are not available in AdventureWorks.
 -- Assumption: Holding cost is estimated as 25% of StandardCost per year (carrying rate proxy).
@@ -427,8 +427,3 @@ SELECT
 FROM Sales_Last_Year d
 INNER JOIN Prod_Params p
     ON d.ProductID = p.ProductID;
-
-
-
-
-
