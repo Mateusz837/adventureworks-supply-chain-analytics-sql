@@ -2,7 +2,7 @@ USE AdventureWorks2022;
 
 /*    
 ============================================================
-MODULE 2 — DEMAND PLANNING & SALES ANALYTICS (T-SQL)
+MODULE 2 — DEMAND ANALYSIS (T-SQL)
 Database: AdventureWorks2022
 Scope: Tasks 2.1 – 2.5
 ============================================================
@@ -10,7 +10,7 @@ Scope: Tasks 2.1 – 2.5
 
 -- Task 2.1 — Daily Demand Calculation
 -- Business purpose: Calculate daily demand per product based on sales orders.
--- How this helps: Provides a granular demand signal used for short-term planning, variability analysis, safety stock, and demand forecasting.
+-- Business Value: Provides a granular demand signal used for short-term planning, variability analysis, safety stock, and demand forecasting.
 
 SELECT
     sd.ProductID, p.Name, CAST(sh.OrderDate AS DATE) AS OrderDate, SUM(sd.OrderQty) AS Order_Qty
@@ -24,7 +24,7 @@ ORDER BY OrderDate, sd.ProductID;
 
 -- Task 2.2 — Monthly Demand
 -- Business purpose: Aggregate product demand at a monthly level to identify longer-term patterns.
--- How this helps: Supports capacity planning and inventory policy decisions by smoothing daily noise and enabling trend/seasonality analysis.
+-- Business Value: Supports capacity planning and inventory policy decisions by smoothing daily noise and enabling trend/seasonality analysis.
 
 SELECT
     sd.ProductID, p.Name, DATEFROMPARTS(YEAR(sh.OrderDate), MONTH(sh.OrderDate), 1) AS MonthDate, SUM(sd.OrderQty) AS Monthly_Qty
@@ -38,7 +38,7 @@ ORDER BY MonthDate, sd.ProductID;
 
 -- Task 2.3 — Rolling 3-Month Demand
 -- Business purpose: Calculate rolling 3-month demand per product to smooth short-term fluctuations.
--- How this helps: Helps planners identify underlying demand trends while reducing month-to-month volatility for better forecasting and planning.
+-- Business Value: Helps planners identify underlying demand trends while reducing month-to-month volatility for better forecasting and planning.
 
 WITH Monthly_Demand AS (
     SELECT
@@ -64,7 +64,7 @@ ORDER BY ProductID, MonthDate;
 
 -- Task 2.4 — Trend Analysis (Month-over-Month)
 -- Business purpose: Detect demand direction changes by measuring month-over-month (MoM) quantity shifts per product.
--- How this helps: Flags products with accelerating or declining demand, supporting proactive replenishment and inventory adjustments.
+-- Business Value: Flags products with accelerating or declining demand, supporting proactive replenishment and inventory adjustments.
 
 WITH Monthly_Demand AS (
     SELECT
@@ -97,7 +97,7 @@ ORDER BY ProductID, MonthDate;
 
 -- Task 2.5 — Seasonality Index
 -- Business purpose: Measure seasonal demand patterns by comparing monthly demand to the product’s average demand level.
--- How this helps: Identifies peak and off-season periods, enabling better inventory positioning, capacity planning, and promotion timing.
+-- Business Value: Identifies peak and off-season periods, enabling better inventory positioning, capacity planning, and promotion timing.
 -- Assumption: Seasonality index is calculated as Monthly Demand / Average Monthly Demand per product, since no predefined seasonality indicators exist in AdventureWorks.
 
 WITH Monthly_Demand AS (
