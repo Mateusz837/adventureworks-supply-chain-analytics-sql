@@ -376,6 +376,49 @@ FROM Sales_Last_Year d
 INNER JOIN Cost_Params c
     ON d.ProductID = c.ProductID;
 
+-- Task 1.12 — EPQ (Economic Production Quantity)
+-- Business purpose: Estimate the cost-optimal production lot size that minimizes setup and holding costs under finite production capacity.
+-- How this helps: Supports production planning by defining an efficient batch size, reducing excessive setups and avoiding unnecessary inventory buildup.
+-- Assumption: Setup cost is fixed at 120 (currency units) because AdventureWorks does not provide per-product setup cost data.
+-- Assumption: Annual production capacity is set to 100000 units per product as a proxy, since actual capacity constraints are not available in AdventureWorks.
+-- Assumption: Holding cost is estimated as 25% of StandardCost per year (carrying rate proxy).
+
+WITH Range_Date AS (
+    SELECT DATEADD(MONTH, -12, MAX(OrderDate)) AS Start_Date, MAX(OrderDate) AS End_Date
+    FROM Sales.SalesOrderHeader
+),
+Sales_Last_Year AS (
+    SELECT sd.ProductID, SUM(sd.OrderQty) AS Annual_Demand
+    FROM Sales.SalesOrderDetail sd
+    INNER JOIN Sales.SalesOrderHeader sh
+        ON sd.SalesOrderID = sh.SalesOrderID
+    WHERE sh.OrderDate BETWEEN (SELECT Start_Date FROM Range_Date) AND (SELECT End_Date FROM Range_Date)
+    GROUP BY sd.ProductID
+),
+Prod_Params AS (
+    SELECT ProductID, Name,
+           120.0 AS Setup_Cost,
+           CAST(StandardCost * 0.25 AS DECIMAL(18,4)) AS Annual_Holding_Cost,
+           100000.0 AS Annual_Prod_Capacity
+    FROM Production.Product
+    WHERE StandardCost > 0
+)
+SELECT
+    d.ProductID, p.Name, d.Annual_Demand, p.Setup_Cost, p.Annual_Holding_Cost, p.Annual_Prod_Capacity,
+    CASE WHEN p.Annual_Holding_Cost <= 0
+              OR d.Annual_Demand <= 0
+              OR (1.0 - d.Annual_Demand / p.Annual_Prod_Capacity) <= 0
+         THEN NULL
+         ELSE CEILING(
+             SQRT((2.0 * d.Annual_Demand * p.Setup_Cost) /
+                  (p.Annual_Holding_Cost * (1.0 - d.Annual_Demand / p.Annual_Prod_Capacity)))
+         )
+    END AS EPQ
+FROM Sales_Last_Year d
+INNER JOIN Prod_Params p
+    ON d.ProductID = p.ProductID;
+
+
 
 
 
