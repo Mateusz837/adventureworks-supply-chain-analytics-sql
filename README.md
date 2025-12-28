@@ -53,17 +53,16 @@ The project applies commonly used analytical T-SQL techniques, including:
 
 ---
 
-
 ## Repository Structure
 
-```
-adventureworks-inventory-analytics-sql/
-├── README.md
-├── AdventureWorks_SQL_Results.pdf
-└── sql/
-    ├── 01_inventory-analytics-sql
-    └── 02_sales_demand_patterns.sql
-```
+    adventureworks-inventory-analytics-sql/
+    ├── README.md
+    ├── AdventureWorks_SQL_Results.pdf
+    └── sql/
+        ├── 01_inventory_supply_chain.sql
+        └── 02_sales_demand_patterns.sql
+
+---
 
 ## How to Use
 - SQL scripts are organized into **two analytical modules**:
