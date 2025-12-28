@@ -241,6 +241,107 @@ INNER JOIN Production.Product p
 WHERE ds.Demand_Std_Dev IS NOT NULL
   AND lt.Avg_Lead_Time IS NOT NULL;
 
+-- Task 1.9 — Reorder Point (ROP)
+-- Business purpose: Determine the inventory level at which a replenishment order should be triggered to avoid shortages during lead time.
+-- How this helps: Helps planners reorder at the right moment, balancing stockout risk vs excess inventory and improving service level.
+-- Assumption: Average daily demand is estimated from last 30 days of sales and lead time from purchase orders in AdventureWorks.
+-- Assumption: Safety stock uses Z = 1.65 (~95% service level).
+
+WITH Range_Date AS (
+    SELECT DATEADD(DAY, -30, MAX(OrderDate)) AS Start_Date, MAX(OrderDate) AS End_Date
+    FROM Sales.SalesOrderHeader
+),
+Daily_Sales AS (
+    SELECT CAST(sh.OrderDate AS DATE) AS OrderDate, sd.ProductID, SUM(sd.OrderQty) AS Daily_Order_Qty
+    FROM Sales.SalesOrderDetail sd
+    INNER JOIN Sales.SalesOrderHeader sh
+        ON sd.SalesOrderID = sh.SalesOrderID
+    WHERE sh.OrderDate BETWEEN (SELECT Start_Date FROM Range_Date) AND (SELECT End_Date FROM Range_Date)
+    GROUP BY CAST(sh.OrderDate AS DATE), sd.ProductID
+),
+Demand_Stats AS (
+    SELECT
+        ProductID,
+        AVG(CAST(Daily_Order_Qty AS FLOAT)) AS Avg_Daily_Demand,
+        STDEVP(CAST(Daily_Order_Qty AS FLOAT)) AS Demand_Std_Dev
+    FROM Daily_Sales
+    GROUP BY ProductID
+),
+Lead_Time AS (
+    SELECT
+        pd.ProductID,
+        AVG(CAST(DATEDIFF(DAY, ph.OrderDate, ph.ShipDate) AS FLOAT)) AS Avg_Lead_Time
+    FROM Purchasing.PurchaseOrderDetail pd
+    INNER JOIN Purchasing.PurchaseOrderHeader ph
+        ON pd.PurchaseOrderID = ph.PurchaseOrderID
+    WHERE ph.ShipDate IS NOT NULL
+    GROUP BY pd.ProductID
+),
+Safety_Stock AS (
+    SELECT
+        ds.ProductID, ds.Avg_Daily_Demand, ds.Demand_Std_Dev, lt.Avg_Lead_Time,
+        (1.65 * ds.Demand_Std_Dev * SQRT(lt.Avg_Lead_Time)) AS Safety_Stock
+    FROM Demand_Stats ds
+    INNER JOIN Lead_Time lt
+        ON ds.ProductID = lt.ProductID
+)
+SELECT
+    ss.ProductID, p.Name, ss.Avg_Daily_Demand, ROUND(ss.Demand_Std_Dev, 2) AS Demand_Std_Dev,
+    ss.Avg_Lead_Time, ROUND(ss.Safety_Stock, 2) AS Safety_Stock,
+    ROUND((ss.Avg_Daily_Demand * ss.Avg_Lead_Time) + ss.Safety_Stock, 2) AS Reorder_Point
+FROM Safety_Stock ss
+INNER JOIN Production.Product p
+    ON ss.ProductID = p.ProductID
+WHERE ss.Avg_Lead_Time IS NOT NULL
+  AND ss.Avg_Daily_Demand IS NOT NULL;
+
+-- Task 1.10 — MOQ (Minimum Order Quantity)
+-- Business purpose: Estimate a practical minimum order quantity needed to cover demand during lead time.
+-- How this helps: Supports purchasing decisions by suggesting an order size that avoids frequent small orders and reduces stockout risk during replenishment.
+-- Assumption: True supplier MOQ is not available in AdventureWorks; MOQ is approximated as average weekly demand * average lead time (in weeks).
+-- Assumption: Weekly demand is computed from the last 30 days of sales (ISO week aggregation).
+
+WITH Range_Date AS (
+    SELECT DATEADD(DAY, -30, MAX(OrderDate)) AS Start_Date, MAX(OrderDate) AS End_Date
+    FROM Sales.SalesOrderHeader
+),
+Daily_Sales AS (
+    SELECT CAST(sh.OrderDate AS DATE) AS OrderDate, sd.ProductID, SUM(sd.OrderQty) AS Daily_Order_Qty
+    FROM Sales.SalesOrderDetail sd
+    INNER JOIN Sales.SalesOrderHeader sh
+        ON sd.SalesOrderID = sh.SalesOrderID
+    WHERE sh.OrderDate BETWEEN (SELECT Start_Date FROM Range_Date) AND (SELECT End_Date FROM Range_Date)
+    GROUP BY CAST(sh.OrderDate AS DATE), sd.ProductID
+),
+Weekly_Sales AS (
+    SELECT DATEPART(YEAR, OrderDate) AS YR, DATEPART(ISO_WEEK, OrderDate) AS WK, ProductID,
+           SUM(Daily_Order_Qty) AS Weekly_Order_Qty
+    FROM Daily_Sales
+    GROUP BY DATEPART(YEAR, OrderDate), DATEPART(ISO_WEEK, OrderDate), ProductID
+),
+Avg_Weekly_Demand AS (
+    SELECT ProductID, AVG(CAST(Weekly_Order_Qty AS FLOAT)) AS Avg_Weekly_Demand
+    FROM Weekly_Sales
+    GROUP BY ProductID
+),
+Lead_Time_Weeks AS (
+    SELECT
+        pd.ProductID,
+        AVG(CAST(DATEDIFF(DAY, ph.OrderDate, ph.ShipDate) AS FLOAT)) / 7.0 AS Avg_Lead_Time_Weeks
+    FROM Purchasing.PurchaseOrderDetail pd
+    INNER JOIN Purchasing.PurchaseOrderHeader ph
+        ON pd.PurchaseOrderID = ph.PurchaseOrderID
+    WHERE ph.ShipDate IS NOT NULL
+    GROUP BY pd.ProductID
+)
+SELECT
+    d.ProductID, p.Name, lt.Avg_Lead_Time_Weeks, d.Avg_Weekly_Demand,
+    CEILING(d.Avg_Weekly_Demand * lt.Avg_Lead_Time_Weeks) AS MOQ
+FROM Avg_Weekly_Demand d
+INNER JOIN Lead_Time_Weeks lt
+    ON d.ProductID = lt.ProductID
+INNER JOIN Production.Product p
+    ON d.ProductID = p.ProductID;
 
 
 
