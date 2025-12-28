@@ -5,7 +5,7 @@ This repository contains a **business-oriented SQL analytics case study** built 
 
 The project focuses on **inventory control, replenishment logic, and demand planning**, reflecting the type of analyses performed daily by **supply chain planners, inventory analysts, and BI teams** in manufacturing and distribution environments.
 
-**The goal of this project is to demonstrate strong SQL proficiency** by applying advanced analytical techniques to realistic supply chain and demand planning scenarios.  
+**The goal of this project is to demonstrate SQL proficiency** by applying advanced analytical techniques to realistic supply chain and demand planning scenarios.  
 The analysis emphasizes clear query structure, explicit assumptions, readable logic, and direct business applicability.
 
 ---
