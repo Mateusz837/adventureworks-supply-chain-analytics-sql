@@ -59,7 +59,7 @@ The project applies commonly used analytical T-SQL techniques, including:
     ├── README.md
     ├── AdventureWorks_SQL_Results.pdf
     └── sql/
-        ├── 01_inventory_supply_chain.sql
+        ├── 01_inventory_analytics.sql
         └── 02_sales_demand_patterns.sql
 
 ---
