@@ -62,7 +62,7 @@ adventureworks-supply-chain-analytics-sql/
 ├── AdventureWorks_SQL_Results.pdf
 └── sql/
     ├── 01_inventory_supply_chain.sql
-    └── 02_demand_planning_sales.sql
+    └── 02_sales_demand_patterns.sql
 ```
 
 ## How to Use
