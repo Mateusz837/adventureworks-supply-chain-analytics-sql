@@ -57,7 +57,7 @@ The project applies commonly used analytical T-SQL techniques, including:
 ## Repository Structure
 
 ```
-adventureworks-supply-chain-analytics-sql/
+adventureworks-inventory-analytics-sql/
 ├── README.md
 ├── AdventureWorks_SQL_Results.pdf
 └── sql/
