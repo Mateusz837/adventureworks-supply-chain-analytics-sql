@@ -94,5 +94,105 @@ SELECT
 FROM Turnover_Tab
 ORDER BY Turnover DESC;
 
+-- Task 1.5 — Days of Supply (DoS)
+-- Business purpose: Estimate how many days current inventory will last at the current sales rate.
+-- How this helps: Helps prevent stockouts and overstock by prioritizing replenishment decisions based on consumption speed.
+-- Assumption: Average daily demand is calculated from the last 30 days of sales because a longer, cleaner demand history is not provided as a ready KPI in AdventureWorks.
+
+WITH RangeDate AS (
+    SELECT DATEADD(DAY, -30, MAX(OrderDate)) AS StartDate, MAX(OrderDate) AS EndDate
+    FROM Sales.SalesOrderHeader
+),
+TotalDemand AS (
+    SELECT sd.ProductID, p.Name, SUM(sd.OrderQty) AS Total_Qt
+    FROM Sales.SalesOrderDetail sd
+    INNER JOIN Sales.SalesOrderHeader sh
+        ON sd.SalesOrderID = sh.SalesOrderID
+    INNER JOIN Production.Product p
+        ON sd.ProductID = p.ProductID
+    WHERE sh.OrderDate BETWEEN (SELECT StartDate FROM RangeDate) AND (SELECT EndDate FROM RangeDate)
+    GROUP BY sd.ProductID, p.Name
+),
+AVG_Demand AS (
+    SELECT ProductID, Name, Total_Qt / 30.0 AS AVG_Daily_Demand
+    FROM TotalDemand
+),
+Inventory AS (
+    SELECT ProductID, SUM(Quantity) AS Inventory_Qt
+    FROM Production.ProductInventory
+    GROUP BY ProductID
+),
+DaysOfSupply AS (
+    SELECT d.ProductID, d.Name, i.Inventory_Qt, CAST(d.AVG_Daily_Demand AS DECIMAL(10,2)) AS AVG_Daily_Demand,
+           CASE WHEN d.AVG_Daily_Demand = 0 THEN NULL
+                ELSE CAST(i.Inventory_Qt / d.AVG_Daily_Demand AS DECIMAL(10,2))
+           END AS Days_of_Supply
+    FROM AVG_Demand d
+    INNER JOIN Inventory i
+        ON d.ProductID = i.ProductID
+)
+SELECT
+    ProductID, Name, Inventory_Qt, AVG_Daily_Demand, Days_of_Supply,
+    CASE WHEN Days_of_Supply <= 0 THEN 'Out of The Stock risk'
+         WHEN Days_of_Supply <= 7 THEN 'High Stockout risk'
+         WHEN Days_of_Supply <= 30 THEN 'Stock within limits'
+         WHEN Days_of_Supply <= 90 THEN 'Overstock risk'
+         WHEN Days_of_Supply > 90 THEN 'DeadStock'
+    END AS DoS_Category
+FROM DaysOfSupply;
+
+
+-- Task 1.6 — Inventory Aging
+-- Business purpose: Estimate how long inventory has been sitting in stock using the last modified date of the inventory record.
+-- How this helps: Highlights potentially obsolete / slow-moving items, supporting write-off decisions, promotions, and inventory reduction actions.
+-- Assumption: Uses Production.ProductInventory.ModifiedDate as a proxy for stock age because AdventureWorks does not provide receipt-date / lot-level inventory history.
+
+SELECT
+    i.ProductID, p.Name, CAST(i.ModifiedDate AS DATE) AS ModifiedDate,
+    DATEDIFF(DAY, i.ModifiedDate, CAST(GETDATE() AS DATE)) AS Days_in_stock
+FROM Production.ProductInventory i
+INNER JOIN Production.Product p
+    ON i.ProductID = p.ProductID;
+
+
+-- Task 1.7 — ABC Classification (by inventory value)
+-- Business purpose: Prioritize SKUs based on their contribution to total inventory value (A/B/C segmentation).
+-- How this helps: Focuses control on high-value SKUs (A-class) to improve cycle counting, replenishment priority, and working capital efficiency.
+-- Assumption: Inventory value is based on StandardCost * on-hand quantity (current snapshot), since AdventureWorks does not provide receipt-level valuation history.
+
+WITH Product_Inventory_Value AS (
+    SELECT
+        i.ProductID, p.Name,
+        SUM(i.Quantity * p.StandardCost) AS Inventory_Value,
+        SUM(SUM(i.Quantity * p.StandardCost)) OVER () AS Total_Inventory_Value
+    FROM Production.ProductInventory i
+    INNER JOIN Production.Product p
+        ON i.ProductID = p.ProductID
+    GROUP BY i.ProductID, p.Name
+),
+Value_Share AS (
+    SELECT
+        ProductID, Name,
+        (CAST(Inventory_Value AS DECIMAL(18,6)) / CAST(Total_Inventory_Value AS DECIMAL(18,6)) * 100) AS Value_Share_Pct
+    FROM Product_Inventory_Value
+    WHERE Inventory_Value > 0
+),
+Cumulative_Share AS (
+    SELECT
+        ProductID, Name, Value_Share_Pct,
+        SUM(Value_Share_Pct) OVER (ORDER BY Value_Share_Pct DESC) AS Cumulative_Share_Pct
+    FROM Value_Share
+)
+SELECT
+    ProductID, Name, CAST(Cumulative_Share_Pct AS DECIMAL(10,2)) AS Cum_Share_Pct,
+    CASE WHEN Cumulative_Share_Pct <= 80 THEN 'A'
+         WHEN Cumulative_Share_Pct <= 95 THEN 'B'
+         WHEN Cumulative_Share_Pct <= 100 THEN 'C'
+    END AS ABC_Class
+FROM Cumulative_Share
+ORDER BY Cum_Share_Pct;
+
+
+
 
 
