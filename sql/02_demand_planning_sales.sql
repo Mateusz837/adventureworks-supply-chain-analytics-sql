@@ -1,6 +1,6 @@
 USE AdventureWorks2022;   
 
-/* 
+/*    
 ============================================================
 MODULE 2 — DEMAND PLANNING & SALES ANALYTICS (T-SQL)
 Database: AdventureWorks2022
