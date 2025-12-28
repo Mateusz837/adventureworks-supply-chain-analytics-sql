@@ -13,7 +13,7 @@ It was created as a **portfolio project** to demonstrate SQL skills using busine
 ## Tech Stack
 - **Database:** Microsoft SQL Server (AdventureWorks2022)
 - **Query Language:** T-SQL
-- **Tools:** SQL Server Management Studio (SSMS) / Azure Data Studio
+- **Tools:** SQL Server Management Studio (SSMS)
 
 ---
 
