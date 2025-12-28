@@ -71,7 +71,7 @@ adventureworks-supply-chain-analytics-sql/
 ## How to Use
 - SQL scripts are organized into **two analytical modules**:
   - **Module 1:** Inventory & Supply Chain Analytics (Tasks 1.1–1.12)
-  - **Module 2:** Demand Planning & Sales Analytics (Tasks 2.1–2.5)
+  - **Module 2:**Demand Analysis & Trend Exploration (Tasks 2.1–2.5)
 - Each task includes:
   - a clear business purpose,
   - a short explanation of how the result is used in practice,
