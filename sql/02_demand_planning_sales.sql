@@ -1,3 +1,13 @@
+USE AdventureWorks2022;
+
+/*
+============================================================
+MODULE 2 — DEMAND PLANNING & SALES ANALYTICS (T-SQL)
+Database: AdventureWorks2022
+Scope: Tasks 2.1 – 2.5
+============================================================
+*/
+
 -- Task 2.1 — Daily Demand Calculation
 -- Business purpose: Calculate daily demand per product based on sales orders.
 -- How this helps: Provides a granular demand signal used for short-term planning, variability analysis, safety stock, and demand forecasting.
