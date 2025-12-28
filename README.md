@@ -18,16 +18,16 @@ It was created as a **portfolio project** to demonstrate SQL skills using busine
 ---
 
 ## Analytical Scope & Techniques
-The project applies commonly used analytical SQL techniques, including:
+The project applies commonly used analytical T-SQL techniques, including:
 
-- Multi-table joins across sales, inventory, purchasing, and product tables
-- Common Table Expressions (CTEs) for structured query logic
+- Multi-table joins and aggregations
+- Common Table Expressions (CTEs)
 - Window functions (`SUM() OVER`, `AVG() OVER`, `LAG`)
 - Time-based aggregations (daily, monthly, rolling windows)
-- Inventory and demand-related metrics
+- Rolling calculations (e.g., 3-month rolling demand)
+- Statistical functions (e.g., standard deviation via `STDEVP`)
 - Conditional logic using `CASE`
-- Explicit assumptions where required due to data limitations
-- Clear naming conventions and readable query structure
+- Defensive calculations (e.g., `NULLIF` / divide-by-zero handling, explicit casting to avoid integer division)
 
 ---
 
